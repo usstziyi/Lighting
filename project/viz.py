@@ -27,7 +27,10 @@ def export_mlp_graph():
         save_graph=False,
     )
     # 提高渲染 DPI（默认 96），图片更清晰；也可改成 svg 得到无限清晰矢量图
-    model_graph.visual_graph.graph_attr['dpi'] = '300'
+    model_graph.visual_graph.graph_attr.update({
+        'dpi': '300', 
+        'splines': 'spline' # spline 曲线更平滑，ortho 直角正交折线, line 直线折线
+    })
     model_graph.visual_graph.render(
         filename='mlp_graph',
         directory='./viz',
@@ -47,7 +50,10 @@ def export_resnet18_graph():
         save_graph=False,
     )
     # 提高渲染 DPI（默认 96），图片更清晰；也可改成 svg 得到无限清晰矢量图
-    model_graph.visual_graph.graph_attr['dpi'] = '300'
+    model_graph.visual_graph.graph_attr.update({
+        'dpi': '300', 
+        'splines': 'spline' # spline 曲线更平滑，ortho 直角正交折线, line 直线折线
+    })
     model_graph.visual_graph.render(
         filename='resnet18_graph',
         directory='./viz',
@@ -67,7 +73,10 @@ def export_manual_resnet18_graph():
         save_graph=False,
     )
     # 提高渲染 DPI（默认 96），图片更清晰；也可改成 svg 得到无限清晰矢量图
-    model_graph.visual_graph.graph_attr['dpi'] = '300'
+    model_graph.visual_graph.graph_attr.update({
+        'dpi': '300', 
+        'splines': 'ortho' # spline 曲线更平滑，ortho 直角正交折线, line 直线折线
+    })
     model_graph.visual_graph.render(
         filename='manual_resnet18_graph',
         directory='./viz',
