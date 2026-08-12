@@ -16,9 +16,11 @@ class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
 
+        # 升维/降采样
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3,
                                stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
+        # 不变维/不变采样
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3,
                                stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
@@ -32,8 +34,10 @@ class BasicBlock(nn.Module):
             )
 
     def forward(self, x):
-        identity = x
+        # f(x) = x
+        identity = x # 恒等映射 / 恒等连接
 
+        # F(x) = x'
         out = self.conv1(x)
         out = self.bn1(out)
         out = F.relu(out, inplace=True)
@@ -44,6 +48,7 @@ class BasicBlock(nn.Module):
         if self.downsample is not None:
             identity = self.downsample(x)
 
+        # O(x) = F(x) + f(x) = x' + x
         out += identity
         out = F.relu(out, inplace=True)
 
@@ -53,7 +58,7 @@ class BasicBlock(nn.Module):
 class ResNet(L.LightningModule):
     """用于 CIFAR-10 的 ResNet 模型。
 
-    这是一个简化版的 ResNet，适配 32x32 分辨率的图像。
+    这是一个简化版的 ResNet-26，适配 32x32 分辨率的图像。
     """
 
     def __init__(
@@ -68,19 +73,20 @@ class ResNet(L.LightningModule):
         self.save_hyperparameters()
 
         self.in_channels = 64
-
+        # 输入shape(batch_size, 3, 32, 32)
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
+        # 输出shape(batch_size, 64, 32, 32)
 
         self.layer1 = self._make_layer(64, num_blocks, stride=1)
         self.layer2 = self._make_layer(128, num_blocks, stride=2)
         self.layer3 = self._make_layer(256, num_blocks, stride=2)
         self.layer4 = self._make_layer(512, num_blocks, stride=2)
 
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1)) # 输出shape(batch_size, 512, 1, 1)
         self.classifier = nn.Sequential(
             nn.Dropout(dropout_rate),
-            nn.Linear(512, num_classes),
+            nn.Linear(512, num_classes), # 输出shape(batch_size, num_classes)
         )
 
         self.train_preds = []
@@ -90,7 +96,7 @@ class ResNet(L.LightningModule):
 
     def _make_layer(self, out_channels, num_blocks, stride):
         """创建一个残差层。"""
-        strides = [stride] + [1] * (num_blocks - 1)
+        strides = [stride] + [1] * (num_blocks - 1) # [stride, 1, 1, 1, ...]
         layers = []
         for stride_val in strides:
             layers.append(BasicBlock(self.in_channels, out_channels, stride_val))
