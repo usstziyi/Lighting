@@ -67,8 +67,8 @@ def parse_args():
     parser.add_argument("--strategy", type=str, default="auto",
                        choices=["auto", "ddp", "ddp_find_unused_parameters"],
                        help="分布式训练策略")
-    parser.add_argument("--precision", type=str, default="32-mix",
-                       choices=["32-true", "32-mix", "16-mix"],
+    parser.add_argument("--precision", type=str, default="16-mixed",
+                       choices=["32-true", "16-mixed"],
                        help="训练精度")
 
     parser.add_argument("--patience", type=int, default=5,

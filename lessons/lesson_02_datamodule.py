@@ -242,7 +242,7 @@ def main():
         max_epochs=15,
         accelerator="auto",
         devices=1,
-        precision="32-mix",
+        precision="16-mixed",
         gradient_clip_val=1.0,
     )
 

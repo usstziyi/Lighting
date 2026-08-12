@@ -61,7 +61,7 @@ class AdvancedClassifier(L.LightningModule):
         self.net = nn.Sequential(*layers)
 
     def forward(self, x):
-        # 使用梯度检查点节省显存
+        # 使用梯度检查点节省显存,用时间换空间
         if self.hparams.use_gradient_checkpointing and self.training:
             return torch.utils.checkpoint.checkpoint(self.net, x, use_reentrant=False)
         return self.net(x)
@@ -157,13 +157,13 @@ def demo_single_gpu():
     train_loader, val_loader = create_data(n_samples=3000)
     model = AdvancedClassifier(input_dim=32, hidden_dims=[128, 64], output_dim=10)
 
-    # 在 CPU 上使用 32-true，在 GPU 上使用 32-mix
+    # 在 CPU 上使用 32-true，在 GPU 上使用 16-mixed
     has_gpu = torch.cuda.is_available()
     trainer = L.Trainer(
         max_epochs=5,
         accelerator="gpu" if has_gpu else "cpu",
         devices=1,
-        precision="32-mix" if has_gpu else "32-true",
+        precision="16-mixed" if has_gpu else "32-true",
         gradient_clip_val=1.0,
     )
 
@@ -189,7 +189,7 @@ def demo_ddp():
         accelerator="gpu",
         devices=2,
         strategy="ddp",      # DDP 策略
-        precision="32-mix",
+        precision="16-mixed",
         gradient_clip_val=1.0,
         sync_batchnorm=True,  # 同步 BatchNorm
     )
@@ -212,8 +212,8 @@ def demo_gradient_accumulation():
         max_epochs=5,
         accelerator="gpu" if has_gpu else "cpu",
         devices=1,
-        accumulate_grad_batches=4,
-        precision="32-mix" if has_gpu else "32-true",
+        accumulate_grad_batches=4, # 梯度累积步数
+        precision="16-mixed" if has_gpu else "32-true",
         gradient_clip_val=1.0,
     )
 
@@ -263,6 +263,9 @@ def demo_reproducibility():
     print("=" * 60)
 
     # 设置全局随机种子
+    # workers=True ：除了固定 PyTorch、NumPy、Python 等全局随机种子外，
+    # 还会把 DataLoader 的 num_workers 线程也种上种子。
+    # 这样每个数据加载 worker 生成的随机顺序/数据也是确定的。
     L.seed_everything(42, workers=True)
 
     train_loader, val_loader = create_data(n_samples=2000)

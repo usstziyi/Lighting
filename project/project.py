@@ -74,7 +74,7 @@ def quick_demo():
         max_epochs=3,
         accelerator="auto",
         devices=1,
-        precision="32-mix",
+        precision="16-mixed",
         gradient_clip_val=1.0,
         log_every_n_steps=5,
         enable_progress_bar=True,
