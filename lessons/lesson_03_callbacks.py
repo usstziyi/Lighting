@@ -107,6 +107,9 @@ class AccuracyThresholdCallback(Callback):
 
     def on_validation_end(self, trainer, pl_module):
         """验证结束时检查指标。"""
+        # trainer.callback_metrics — 返回一个字典，
+        # 包含本轮训练/验证中所有通过 self.log() 记录的指标（如 val_acc 、 val_loss ）。
+        # 在回调里可以通过 trainer 访问它，因为每个回调方法都会接收 trainer 参数。
         metrics = trainer.callback_metrics
         val_acc = metrics.get("val_acc")
 

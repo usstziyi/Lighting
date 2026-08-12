@@ -1,0 +1,10 @@
+architecture: MLP-64-32-4
+batch_size: 64
+hidden_dims:
+- 64
+- 32
+input_dim: 20
+learning_rate: 0.001
+optimizer: AdamW
+output_dim: 4
+weight_decay: 0.0001

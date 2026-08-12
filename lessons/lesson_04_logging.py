@@ -86,11 +86,15 @@ class AdvancedModel(L.LightningModule):
             acc = (all_preds == all_labels).float().mean()
 
             # 计算 F1 score（手动计算）
+            # 判断样本 i 是否属于类别 cls：
+            # preds[i] == cls ?   模型认不认它是 cls（模型侧）
+            # labels[i] == cls ?  它实际上是不是 cls（事实侧）
             f1_scores = []
             for cls in range(self.hparams.output_dim):
-                tp = ((all_preds == cls) & (all_labels == cls)).sum().float()
-                fp = ((all_preds == cls) & (all_labels != cls)).sum().float()
-                fn = ((all_preds != cls) & (all_labels == cls)).sum().float()
+                tp = ((all_preds == cls) & (all_labels == cls)).sum().float() # True Positive
+                fp = ((all_preds == cls) & (all_labels != cls)).sum().float() # False Positive
+                fn = ((all_preds != cls) & (all_labels == cls)).sum().float() # False Negative
+                tn = ((all_preds != cls) & (all_labels != cls)).sum().float() # True Negative
 
                 precision = tp / (tp + fp + 1e-8)
                 recall = tp / (tp + fn + 1e-8)
@@ -242,7 +246,6 @@ def main():
         max_epochs=15,
         accelerator="auto",
         devices=1,
-        precision="32-mix",
         gradient_clip_val=1.0,
         logger=loggers,  # 使用多个日志器
         log_every_n_steps=5,
