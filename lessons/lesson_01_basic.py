@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
-from torchinfo import summary
+from torchinfo import summary, make_dot
 import lightning as L
 from lightning.pytorch.callbacks import RichProgressBar
 

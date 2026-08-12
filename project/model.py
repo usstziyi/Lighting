@@ -28,13 +28,13 @@ class BasicBlock(nn.Module):
         self.downsample: Optional[nn.Sequential] = None
         if stride != 1 or in_channels != out_channels:
             self.downsample = nn.Sequential(
+                # 投影只是为了"对齐形状"，不是做特征提取
                 nn.Conv2d(in_channels, out_channels, kernel_size=1,
                           stride=stride, bias=False),
                 nn.BatchNorm2d(out_channels),
             )
 
     def forward(self, x):
-        # f(x) = x
         identity = x # 恒等映射 / 恒等连接
 
         # F(x) = x'
@@ -44,7 +44,7 @@ class BasicBlock(nn.Module):
 
         out = self.conv2(out)
         out = self.bn2(out)
-
+        # f(x) = x
         if self.downsample is not None:
             identity = self.downsample(x)
 
@@ -72,21 +72,23 @@ class ResNet(L.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.in_channels = 64
+        
         # 输入shape(batch_size, 3, 32, 32)
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         # 输出shape(batch_size, 64, 32, 32)
 
-        self.layer1 = self._make_layer(64, num_blocks, stride=1)
-        self.layer2 = self._make_layer(128, num_blocks, stride=2)
-        self.layer3 = self._make_layer(256, num_blocks, stride=2)
-        self.layer4 = self._make_layer(512, num_blocks, stride=2)
+        self.in_channels = 64
+        
+        self.layer1 = self._make_layer(out_channels=64, num_blocks=num_blocks, stride=1) # 输出shape(batch_size, 64, 32, 32)
+        self.layer2 = self._make_layer(out_channels=128, num_blocks=num_blocks, stride=2) # 输出shape(batch_size, 128, 16, 16)
+        self.layer3 = self._make_layer(out_channels=256, num_blocks=num_blocks, stride=2) # 输出shape(batch_size, 256, 8, 8)
+        self.layer4 = self._make_layer(out_channels=512, num_blocks=num_blocks, stride=2) # 输出shape(batch_size, 512, 4, 4)
 
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1)) # 输出shape(batch_size, 512, 1, 1)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.classifier = nn.Sequential(
             nn.Dropout(dropout_rate),
-            nn.Linear(512, num_classes), # 输出shape(batch_size, num_classes)
+            nn.Linear(512, num_classes),
         )
 
         self.train_preds = []
@@ -96,7 +98,7 @@ class ResNet(L.LightningModule):
 
     def _make_layer(self, out_channels, num_blocks, stride):
         """创建一个残差层。"""
-        strides = [stride] + [1] * (num_blocks - 1) # [stride, 1, 1, 1, ...]
+        strides = [stride] + [1] * (num_blocks - 1) # [stride, 1, 1,]
         layers = []
         for stride_val in strides:
             layers.append(BasicBlock(self.in_channels, out_channels, stride_val))
@@ -111,11 +113,11 @@ class ResNet(L.LightningModule):
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
-        out = self.layer4(out)
+        out = self.layer4(out) # 输出shape(batch_size, 512, 4, 4)
 
-        out = self.avgpool(out)
-        out = torch.flatten(out, 1)
-        out = self.classifier(out)
+        out = self.avgpool(out) # 输出shape(batch_size, 512, 1, 1)
+        out = torch.flatten(out, 1) # 输出shape(batch_size, 512)
+        out = self.classifier(out) # 输出shape(batch_size, num_classes)
 
         return out
 

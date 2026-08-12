@@ -36,6 +36,8 @@ import lightning as L
 from model import ResNet
 from datamodule import CIFAR10DataModule
 from utils import get_cifar10_classes
+from lightning.pytorch.loggers import TensorBoardLogger
+from torchinfo import summary
 
 
 def quick_demo():
@@ -51,9 +53,9 @@ def quick_demo():
     datamodule = CIFAR10DataModule(
         data_dir="./data",
         batch_size=64,
-        num_workers=0,  # 使用 0 避免多进程问题
+        num_workers=4,
         val_split=0.1,
-        augment=True,
+        augment=True, # 是否进行数据增强
     )
 
     # 创建模型
@@ -65,24 +67,39 @@ def quick_demo():
         dropout_rate=0.2,
     )
 
-    # 打印模型信息
-    total_params = sum(p.numel() for p in model.parameters())
-    print(f"\n模型参数量: {total_params:,}")
+    # torchinfo
+    summary(
+        model, 
+        input_size=(1, 3, 32, 32),
+        col_names=["input_size", "output_size", "num_params","trainable"],
+        verbose=1,
+    )
+
+
+    # 创建 Logger（启用计算图记录到 TensorBoard）
+    logger = TensorBoardLogger("lightning_logs", log_graph=True)
+
+    # 提供示例输入，TensorBoard 才能追踪计算图
+    model.example_input_array = torch.randn(1, 3, 32, 32)
 
     # 创建 Trainer（简化配置）
     trainer = L.Trainer(
-        max_epochs=3,
+        max_epochs=1,
         accelerator="auto",
-        devices=1,
-        precision="16-mixed",
+        devices="auto",
         gradient_clip_val=1.0,
         log_every_n_steps=5,
         enable_progress_bar=True,
+        logger=logger,
     )
 
-    # 训练
+
+
+    # 训练（fit 时自动将计算图记录到 TensorBoard）
     print("\n开始训练 (3 epochs)...")
     trainer.fit(model, datamodule=datamodule)
+
+    return
 
     # 测试
     print("\n测试结果:")

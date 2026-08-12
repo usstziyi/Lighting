@@ -32,7 +32,7 @@ class CIFAR10DataModule(L.LightningDataModule):
         batch_size: int = 128,
         num_workers: int = 4,
         val_split: float = 0.1,
-        augment: bool = True,
+        augment: bool = True, # 是否进行数据增强
     ):
         super().__init__()
         self.save_hyperparameters()
