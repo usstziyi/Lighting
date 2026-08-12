@@ -16,6 +16,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 import lightning as L
+from lightning.pytorch.callbacks import RichProgressBar
 
 
 # ============================================================
@@ -80,8 +81,8 @@ class SimpleMLP(L.LightningModule):
         loss, acc = self._shared_step(batch, batch_idx)
 
         # on_epoch=True 会在整个 epoch 结束后聚合指标
-        self.log("val_loss", loss, prog_bar=True, on_epoch=True)
-        self.log("val_acc", acc, prog_bar=True, on_epoch=True)
+        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_acc", acc, prog_bar=True)
 
         return loss
 
@@ -111,7 +112,7 @@ def create_dummy_data(n_samples: int = 1000, input_dim: int = 10):
     y = (logits > 0).long()
 
     # 划分数据集
-    train_size = int(0.8 * n_samples)
+    train_size = int(0.6 * n_samples)
     X_train, y_train = X[:train_size], y[:train_size]
     X_val, y_val = X[train_size:], y[train_size:]
 
@@ -130,7 +131,7 @@ def main():
     print("=" * 60)
 
     # 创建数据
-    train_dataset, val_dataset = create_dummy_data(n_samples=2000, input_dim=10)
+    train_dataset, val_dataset = create_dummy_data(n_samples=200000, input_dim=10)
 
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
@@ -146,41 +147,41 @@ def main():
     trainer = L.Trainer(
         max_epochs=10,           # 最大训练轮数
         accelerator="auto",      # 自动选择设备（GPU/CPU）
-        devices=1,              # 使用的设备数量
-        precision="32-mix",      # 混合精度训练（节省显存，加速训练）
+        devices="auto",              # 使用的设备数量
         gradient_clip_val=1.0,  # 梯度裁剪，防止梯度爆炸
         log_every_n_steps=10,    # 每多少步记录一次日志
+        callbacks=[RichProgressBar(leave=True)],  # 保留每个 epoch 的进度条，不覆盖
     )
 
     # 开始训练
     print("\n开始训练...")
     trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
-    # 测试模型
-    print("\n在验证集上测试...")
-    trainer.test(model, dataloaders=val_loader)
+    # # 测试模型
+    # print("\n在验证集上测试...")
+    # trainer.test(model, dataloaders=val_loader)
 
-    # 演示如何保存和加载模型
-    print("\n保存模型...")
-    trainer.save_checkpoint("lesson_01_model.ckpt")
+    # # 演示如何保存和加载模型
+    # print("\n保存模型...")
+    # trainer.save_checkpoint("lesson_01_model.ckpt")
 
-    # 从检查点加载
-    print("\n从检查点加载模型...")
-    loaded_model = SimpleMLP.load_from_checkpoint("lesson_01_model.ckpt")
+    # # 从检查点加载
+    # print("\n从检查点加载模型...")
+    # loaded_model = SimpleMLP.load_from_checkpoint("lesson_01_model.ckpt")
 
-    # 推理示例
-    loaded_model.eval()
-    test_input = torch.randn(5, 10)
-    with torch.no_grad():
-        predictions = loaded_model(test_input)
-        predicted_classes = torch.argmax(predictions, dim=1)
+    # # 推理示例
+    # loaded_model.eval()
+    # test_input = torch.randn(5, 10)
+    # with torch.no_grad():
+    #     predictions = loaded_model(test_input)
+    #     predicted_classes = torch.argmax(predictions, dim=1)
 
-    print(f"\n推理示例 (5个样本):")
-    print(f"  预测类别: {predicted_classes}")
+    # print(f"\n推理示例 (5个样本):")
+    # print(f"  预测类别: {predicted_classes}")
 
-    print("\n" + "=" * 60)
-    print("Lesson 01 完成!")
-    print("=" * 60)
+    # print("\n" + "=" * 60)
+    # print("Lesson 01 完成!")
+    # print("=" * 60)
 
 
 if __name__ == "__main__":

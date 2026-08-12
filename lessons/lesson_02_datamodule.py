@@ -75,7 +75,7 @@ class SyntheticDataModule(L.LightningDataModule):
         num_workers: int = 0,
     ):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters() # 供后续通过 self.hparams 访问
 
         self.train_dataset = None
         self.val_dataset = None
