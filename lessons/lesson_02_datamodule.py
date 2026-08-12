@@ -32,7 +32,7 @@ class SyntheticDataset(Dataset):
         # 使用固定种子确保可复现
         g = torch.Generator().manual_seed(seed)
 
-        # 生成特征
+        # 生成特征(n_samples, input_dim)
         self.X = torch.randn(n_samples, input_dim, generator=g)
 
         # 生成标签：两个高斯分布
@@ -94,6 +94,10 @@ class SyntheticDataModule(L.LightningDataModule):
 
         Args:
             stage: 'fit', 'validate', 'test', or None
+
+            - Trainer.fit() 内部调用 setup(stage="fit") → 只建 train/val。
+            - Trainer.test() 内部调用 setup(stage="test") → 只建 test。
+            - 手动调用 datamodule.setup() （不传 stage，如 main 里 L257 ）→ 两个都建。
         """
         if stage == "fit" or stage is None:
             # 创建训练和验证数据集
@@ -128,6 +132,7 @@ class SyntheticDataModule(L.LightningDataModule):
             shuffle=True,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
+            persistent_workers=True,
         )
 
     def val_dataloader(self):
@@ -137,6 +142,7 @@ class SyntheticDataModule(L.LightningDataModule):
             shuffle=False,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
+            persistent_workers=True,
         )
 
     def test_dataloader(self):

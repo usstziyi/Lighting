@@ -15,6 +15,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
+from torchinfo import summary
 import lightning as L
 from lightning.pytorch.callbacks import RichProgressBar
 
@@ -38,11 +39,20 @@ class SimpleMLP(L.LightningModule):
         super().__init__()
         self.save_hyperparameters()  # 自动保存超参数，便于重现
 
+        self.example_input_array = torch.zeros(1, input_dim)
+        
         # 定义网络结构
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, output_dim)
-        self.dropout = nn.Dropout(0.2)
+        # 用 nn.Sequential 把激活函数也封装成 nn.Module（nn.ReLU），
+        # 这样 print(model) / torchinfo.summary 就能显示包括 ReLU 在内的完整层次
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(hidden_dim, output_dim),
+        )
 
         # 用于记录指标的字典
         self.train_loss_epoch = []
@@ -50,12 +60,7 @@ class SimpleMLP(L.LightningModule):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """前向传播"""
-        x = F.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = F.relu(self.fc2(x))
-        x = self.dropout(x)
-        x = self.fc3(x)
-        return x
+        return self.net(x)
 
     def _shared_step(self, batch, batch_idx):
         """训练和验证的共用逻辑"""
@@ -139,8 +144,17 @@ def main():
     # 创建模型
     model = SimpleMLP(input_dim=10, hidden_dim=32, output_dim=2)
 
-    print(f"\n模型结构:\n{model}")
-    print(f"\n参数量: {sum(p.numel() for p in model.parameters()):,}")
+    # 打印模型结构
+    # print(model) 只按 __init__ 中的注册顺序列出模块，不含 forward 里的 F.relu 等函数式操作
+    # torchinfo.summary 会实际执行一次 forward，按真实执行顺序展示各模块的输入/输出形状与参数量
+    # （注意: F.relu 是函数式调用，仍不会被显示；若想让它出现在结构里，需改用 nn.ReLU 模块）
+    print("\n模型结构:")
+    summary(
+        model,
+        input_size=(1, 10),  # (batch_size, input_dim)
+        col_names=["input_size", "output_size", "num_params","trainable"],
+        verbose=1,
+    )
 
     # 创建 Trainer
     # Trainer 封装了所有训练工程细节: GPU管理、分布式训练、日志记录等
